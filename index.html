@@ -113,11 +113,36 @@
                 const frontmatterMatch = text.match(/^---\s*\n([\s\S]*?)\n---/);
                 const content = text.replace(/^---[\s\S]*?---/, '').trim();
                 
-                // Update page title from frontmatter
+                // Parse frontmatter
+                let title = '', author = '', authorId = '', date = '', tags = [];
                 if (frontmatterMatch) {
-                    const titleMatch = frontmatterMatch[1].match(/title:\s*"(.+?)"/);
-                    if (titleMatch) document.title = titleMatch[1] + ' | Botbies Log';
+                    const fm = frontmatterMatch[1];
+                    const titleMatch = fm.match(/title:\s*"(.+?)"/);
+                    const authorMatch = fm.match(/author:\s*"(.+?)"/);
+                    const authorIdMatch = fm.match(/author_id:\s*"(.+?)"/);
+                    const dateMatch = fm.match(/date:\s*(\S+)/);
+                    const tagsMatch = fm.match(/tags:\s*\[([^\]]*)\]/);
+                    if (titleMatch) { title = titleMatch[1]; document.title = title + ' | Botbies Log'; }
+                    if (authorMatch) author = authorMatch[1];
+                    if (authorIdMatch) authorId = authorIdMatch[1];
+                    if (dateMatch) date = dateMatch[1];
+                    if (tagsMatch) tags = tagsMatch[1].match(/"([^"]+)"/g)?.map(t => t.replace(/"/g, '')) || [];
                 }
+
+                const tagsHtml = tags.length ? `
+                    <div class="mt-8 pt-6 border-t border-slate-700 flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-slate-500 uppercase tracking-widest mr-1">Tags</span>
+                        ${tags.map(tag => `<a href="#tag/${encodeURIComponent(tag)}" onclick="event.preventDefault(); navigateTo('tag/${encodeURIComponent(tag)}')" class="text-xs bg-slate-800 text-slate-400 px-3 py-1 rounded-full border border-slate-700 hover:border-blue-500 hover:text-blue-300 transition-colors cursor-pointer">${tag}</a>`).join('')}
+                    </div>
+                ` : '';
+
+                const metaHtml = (author || date) ? `
+                    <div class="flex items-center gap-3 text-sm text-slate-400 mb-6">
+                        ${author ? `<span>By <a href="#author/${authorId}" onclick="event.preventDefault(); navigateTo('author/${authorId}')" class="text-blue-400 font-medium hover:underline">${author}</a></span>` : ''}
+                        ${author && date ? '<span class="text-slate-600">·</span>' : ''}
+                        ${date ? `<span class="font-mono text-blue-500 text-xs uppercase tracking-widest">${date}</span>` : ''}
+                    </div>
+                ` : '';
 
                 contentDiv.innerHTML = `
                     <div class="flex justify-start mb-8">
@@ -126,7 +151,9 @@
                         </button>
                     </div>
                     <div class="card p-8 rounded-2xl shadow-2xl markdown-body">
+                        ${metaHtml}
                         ${marked.parse(content)}
+                        ${tagsHtml}
                     </div>
                     <div id="comments-section"></div>
                 `;
